@@ -1,0 +1,153 @@
+[project]
+name = "3dprint-pim-backend"
+version = "0.1.0"
+description = "Backend cho hệ thống quản lý sản phẩm & SKU in 3D đa kênh"
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    # --- Core Django ---
+    # Django 5.1 LTS-track, hỗ trợ Python 3.13
+    "django>=5.1,<5.2",
+    "django-environ>=0.11,<1.0",
+
+    # --- API ---
+    "djangorestframework>=3.15,<3.16",
+    "drf-spectacular>=0.27,<1.0",
+    "django-filter>=24.2,<25.0",
+    "django-cors-headers>=4.4,<5.0",
+
+    # --- Auth (JWT + allauth + dj-rest-auth) ---
+    "djangorestframework-simplejwt>=5.3,<6.0",
+    "django-allauth>=64.0,<65.0",
+    "dj-rest-auth>=6.0,<7.0",
+    "django-guardian>=2.4,<3.0",
+
+    # --- Database ---
+    "psycopg[binary]>=3.1,<4.0",
+    "dj-database-url>=2.2,<3.0",
+
+    # --- Storage ---
+    "django-storages[s3]>=1.14,<2.0",
+    "boto3>=1.35,<2.0",
+
+    # --- Async / Celery ---
+    "celery[redis]>=5.3,<6.0",
+    "redis>=5.0,<6.0",
+    "django-celery-beat>=2.6,<3.0",
+    "django-celery-results>=2.5,<3.0",
+
+    # --- Encryption (cho MarketplaceCredential) ---
+    "cryptography>=43.0,<44.0",
+    "django-encrypted-model-fields>=0.6,<1.0",
+
+    # --- Utilities ---
+    "Pillow>=10.4,<12.0",
+    "python-slugify>=8.0,<9.0",
+    "django-extensions>=3.2,<4.0",
+
+    # --- Production server ---
+    "gunicorn>=23.0,<24.0",
+    "whitenoise>=6.7,<7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # --- Lint / format / type ---
+    "ruff>=0.6,<1.0",
+    "mypy>=1.11,<2.0",
+    "django-stubs[compatible-mypy]>=5.0,<6.0",
+    "djangorestframework-stubs[compatible-mypy]>=3.15,<4.0",
+
+    # --- Test ---
+    "pytest>=8.3,<9.0",
+    "pytest-django>=4.9,<5.0",
+    "pytest-cov>=5.0,<6.0",
+    "pytest-mock>=3.14,<4.0",
+    "factory-boy>=3.3,<4.0",
+    "freezegun>=1.5,<2.0",
+    "responses>=0.25,<1.0",
+
+    # --- Debug ---
+    "django-debug-toolbar>=4.4,<5.0",
+    "ipython>=8.27,<9.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "migrations",
+    ".venv",
+    "staticfiles",
+    "media",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "DJ",   # flake8-django
+    "PL",   # pylint
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",     # line too long (formatter handles)
+    "PLR0913",  # too many arguments
+    "PLR2004",  # magic number comparisons
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["PLR2004", "S101", "B011"]
+"**/settings/**" = ["F405", "F403"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+exclude = ["migrations/", ".venv/"]
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+check_untyped_defs = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.test"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "tests.py", "*_test.py"]
+addopts = [
+    "--strict-markers",
+    "--reuse-db",
+    "-ra",
+]
+markers = [
+    "slow: tốn thời gian, skip default",
+    "integration: cần DB / Redis thật",
+    "external: gọi marketplace API thật",
+]
+
+[tool.coverage.run]
+source = ["apps"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/admin.py",
+    "*/apps.py",
+    "manage.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
