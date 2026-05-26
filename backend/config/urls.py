@@ -9,11 +9,24 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
+
+# Auth endpoints — JWT (simplejwt). Tạm thay cho feature `accounts/auth UI`
+# (defer per ANALYSIS OQ-2). Catalog Manager dùng để lấy token test API.
+auth_patterns = [
+    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("token/verify/", TokenVerifyView.as_view(), name="token_verify"),
+]
 
 api_v1_patterns = [
-    # Sẽ include từng app khi triển khai feature:
-    # path("auth/", include("apps.accounts.urls")),
-    # path("catalog/", include("apps.catalog.urls")),
+    path("auth/", include((auth_patterns, "auth"))),
+    path("catalog/", include("apps.catalog.urls")),
+    # Sẽ include thêm khi triển khai feature:
     # path("skus/", include("apps.skus.urls")),
     # ...
 ]
