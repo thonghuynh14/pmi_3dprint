@@ -258,7 +258,18 @@ Chi tiết: [docs/architecture/business-rules.md](docs/architecture/business-rul
 - [x] Skills system setup (6 skills)
 - [x] Docs structure
 - [x] CLAUDE.md
-- [ ] Phase 1: Foundation (scaffold Django + Next.js)
-- [ ] Phase 5: First feature — **CRUD Product** (test pipeline)
+- [x] Phase 1: Foundation (scaffold Django + Next.js) — commit `ca23db4`
+- [x] Phase 5: First feature — **CRUD Product** (test pipeline) — commits `91ddf64` (BE) + `c14c9f1` (FE)
 
-**Next action**: User mở Claude Code, gõ `claude` trong VS Code terminal, prompt: "Đọc CLAUDE.md và docs/architecture/full-spec.md, sau đó scaffold backend Django + frontend Next.js theo ARCHITECTURE.md. Làm từng bước, hỏi tôi sau mỗi bước."
+**Đã chốt trong quá trình build** (deviation so với spec ban đầu):
+- **Django 5.1.x** (thay 5.0.x) — hỗ trợ Python 3.13 ở máy dev
+- **Tailwind 3.4 + shadcn classic "new-york"** (không dùng base-nova/Tailwind v4)
+- Deps FE thêm: `tailwindcss-animate`, `@radix-ui/react-slot` (deps mặc định shadcn classic)
+- Test stack FE: Vitest + Testing Library + MSW + Playwright
+
+**Deferred (tracked, sẽ làm ở feature `accounts`)**:
+- Auth UI thật (hiện dev login lưu access token ở localStorage)
+- i18n wiring (next-intl đã cài, strings còn hardcode)
+- Middleware-based route guard + RBAC permission ở viewset
+
+**Next action**: Build feature thứ 2 qua pipeline đầy đủ. Ứng viên theo roadmap MVP: `accounts/RBAC` (gỡ các deferred ở trên) hoặc `02-variant-crud` (cần Product FK — đã sẵn). Prompt: "Tôi muốn thêm tính năng [X]" → kick off `ba-spec` PHA 1.
