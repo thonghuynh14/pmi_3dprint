@@ -1,1 +1,6 @@
-export { apiClient, getAccessToken, setAccessToken } from "./client";
+export {
+  apiClient,
+  bootstrapAccessTokenFromStorage,
+  getAccessToken,
+  setAccessToken,
+} from "./client";

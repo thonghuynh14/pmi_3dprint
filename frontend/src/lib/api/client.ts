@@ -21,16 +21,35 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "http://localhost:8000/api";
 
 // =============================================================================
-// Token storage (in-memory; refresh trong httpOnly cookie do BE quản)
+// Token storage
 // =============================================================================
+// MVP: lưu access token trong localStorage để survive page refresh khi
+// chưa có feature `accounts/auth UI` (defer per OQ-2). Production sẽ
+// chuyển sang in-memory + httpOnly refresh cookie.
+const LS_KEY = "pim_access_token";
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
+  if (typeof window === "undefined") return;
+  if (token) {
+    window.localStorage.setItem(LS_KEY, token);
+  } else {
+    window.localStorage.removeItem(LS_KEY);
+  }
 }
 
 export function getAccessToken(): string | null {
   return accessToken;
+}
+
+/** Đọc token từ localStorage vào memory. Gọi 1 lần ở client mount
+ * (xem components/providers.tsx hoặc app/(admin)/layout.tsx). */
+export function bootstrapAccessTokenFromStorage(): void {
+  if (typeof window === "undefined") return;
+  if (accessToken) return;
+  const stored = window.localStorage.getItem(LS_KEY);
+  if (stored) accessToken = stored;
 }
 
 // =============================================================================
