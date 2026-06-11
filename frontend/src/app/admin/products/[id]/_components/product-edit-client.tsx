@@ -74,22 +74,29 @@ export function ProductEditClient({ id }: { id: string }) {
           <h1 className="mt-2 text-2xl font-semibold">{data.name}</h1>
           <p className="font-mono text-xs text-muted-foreground">{data.sku_root}</p>
         </div>
-        {isDeleted ? (
-          <Button
-            variant="outline"
-            onClick={() => restoreMutation.mutate(id)}
-            disabled={restoreMutation.isPending}
-          >
-            Khôi phục
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/admin/products/${id}/variants`}>
+              Quản lý variants
+            </Link>
           </Button>
-        ) : (
-          <Button
-            variant="destructive"
-            onClick={() => setConfirmingDelete(true)}
-          >
-            Xoá
-          </Button>
-        )}
+          {isDeleted ? (
+            <Button
+              variant="outline"
+              onClick={() => restoreMutation.mutate(id)}
+              disabled={restoreMutation.isPending}
+            >
+              Khôi phục
+            </Button>
+          ) : (
+            <Button
+              variant="destructive"
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Xoá
+            </Button>
+          )}
+        </div>
       </div>
 
       <ProductForm mode="edit" initialData={data} />
