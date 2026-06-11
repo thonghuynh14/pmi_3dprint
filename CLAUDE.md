@@ -259,17 +259,30 @@ Chi tiết: [docs/architecture/business-rules.md](docs/architecture/business-rul
 - [x] Docs structure
 - [x] CLAUDE.md
 - [x] Phase 1: Foundation (scaffold Django + Next.js) — commit `ca23db4`
-- [x] Phase 5: First feature — **CRUD Product** (test pipeline) — commits `91ddf64` (BE) + `c14c9f1` (FE)
+- [x] Phase 5: Feature 01 — **CRUD Product** (test pipeline) — commits `91ddf64` (BE) + `c14c9f1` (FE)
+- [x] Phase 5: Feature 02 — **CRUD Variant + matrix bulk** — commits `9414a2b` (BE) + `18e476b` (FE)
 
 **Đã chốt trong quá trình build** (deviation so với spec ban đầu):
 - **Django 5.1.x** (thay 5.0.x) — hỗ trợ Python 3.13 ở máy dev
 - **Tailwind 3.4 + shadcn classic "new-york"** (không dùng base-nova/Tailwind v4)
 - Deps FE thêm: `tailwindcss-animate`, `@radix-ui/react-slot` (deps mặc định shadcn classic)
 - Test stack FE: Vitest + Testing Library + MSW + Playwright
+- **Variant axes v1** = 3 trục (material/color/size), defer 5-trục (layer_resolution + infill) sang feature sau khi có nhu cầu thực tế.
 
 **Deferred (tracked, sẽ làm ở feature `accounts`)**:
 - Auth UI thật (hiện dev login lưu access token ở localStorage)
 - i18n wiring (next-intl đã cài, strings còn hardcode)
 - Middleware-based route guard + RBAC permission ở viewset
 
-**Next action**: Build feature thứ 2 qua pipeline đầy đủ. Ứng viên theo roadmap MVP: `accounts/RBAC` (gỡ các deferred ở trên) hoặc `02-variant-crud` (cần Product FK — đã sẵn). Prompt: "Tôi muốn thêm tính năng [X]" → kick off `ba-spec` PHA 1.
+**Deferred sau feature 02**:
+- E2E Playwright cho variant matrix flow chưa chạy (file viết xong, cần Docker daemon up)
+- `AuditLog.changes` Decimal serialize: hiện workaround `_jsonify(data)` cục bộ — chuyển encoder vào core/models AuditLog (đỡ phải remember helper ở từng service)
+- AlertDialog thay `window.confirm()` cho warn > 50 variants ở matrix UI
+- 5-trục variants (layer_resolution_mm + infill_percent) khi user thực sự cần
+
+**Next action**: Ứng viên feature 03 theo roadmap MVP:
+- `accounts/RBAC` — gỡ các deferred auth/permission đã tích từ feature 01 (cao priority, blocker cho multi-user)
+- `design-files` — upload STL/GLB + license tracking (BR-003 sẵn sàng wire vào variant)
+- `materials/BOM` — master data nguyên vật liệu + công thức (BR-005 POC cost prep)
+
+Prompt: "Tôi muốn thêm tính năng [X]" → kick off `ba-spec` PHA 1.
