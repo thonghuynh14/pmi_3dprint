@@ -15,6 +15,8 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 
+from apps.skus.views.variants import ProductVariantMatrixView
+
 # Auth endpoints — JWT (simplejwt). Tạm thay cho feature `accounts/auth UI`
 # (defer per ANALYSIS OQ-2). Catalog Manager dùng để lấy token test API.
 auth_patterns = [
@@ -26,8 +28,14 @@ auth_patterns = [
 api_v1_patterns = [
     path("auth/", include((auth_patterns, "auth"))),
     path("catalog/", include("apps.catalog.urls")),
+    path("skus/", include("apps.skus.urls")),
+    # Matrix endpoint nested under product — giữ ngữ cảnh Product trong URL.
+    path(
+        "catalog/products/<uuid:product_id>/variants/bulk-matrix/",
+        ProductVariantMatrixView.as_view(),
+        name="product-variants-bulk-matrix",
+    ),
     # Sẽ include thêm khi triển khai feature:
-    # path("skus/", include("apps.skus.urls")),
     # ...
 ]
 

@@ -1,0 +1,8 @@
+from django.apps import AppConfig
+
+
+class SkusConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.skus"
+    label = "skus"
+    verbose_name = "SKUs (Variants)"
