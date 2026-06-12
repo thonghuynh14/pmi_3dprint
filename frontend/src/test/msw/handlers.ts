@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 
+import type { AuthUser, MeResponse } from "@/lib/types/auth";
 import type {
   Product,
   ProductListItem,
@@ -100,7 +101,84 @@ export const handlers = [
   // VARIANTS
   // ==========================================================================
   ...variantHandlers(),
+
+  // ==========================================================================
+  // AUTH (feature 03)
+  // ==========================================================================
+  ...authHandlers(),
 ];
+
+// ---------------------------------------------------------------------------
+// Auth fixtures + handlers
+// ---------------------------------------------------------------------------
+function makeAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
+  return {
+    id: 1,
+    username: "smoke",
+    email: "smoke@dev.local",
+    full_name: "Smoke Tester",
+    role: "super_admin",
+    is_active: true,
+    ...overrides,
+  };
+}
+
+function authHandlers() {
+  return [
+    // LOGIN
+    http.post(`${BASE}/auth/login/`, async ({ request }) => {
+      const body = (await request.json()) as { username: string; password: string };
+
+      if (body.username === "ghost") {
+        return HttpResponse.json(
+          { detail: "Tên đăng nhập hoặc mật khẩu không đúng." },
+          { status: 401 },
+        );
+      }
+
+      // Map username → role (helper cho test).
+      const roleMap: Record<string, AuthUser["role"]> = {
+        smoke: "super_admin",
+        catmgr: "catalog_manager",
+        cashier: "cashier",
+      };
+      const role = roleMap[body.username] ?? "super_admin";
+
+      return HttpResponse.json(
+        { user: makeAuthUser({ username: body.username, role }) },
+        { status: 200, headers: { "Set-Cookie": "access_token=fake; Path=/" } },
+      );
+    }),
+
+    // ME
+    http.get(`${BASE}/auth/me/`, () => {
+      const body: MeResponse = {
+        user: makeAuthUser(),
+        permissions: [
+          "product:read",
+          "product:create",
+          "variant:read",
+          "variant:create",
+          "user:manage",
+        ],
+      };
+      return HttpResponse.json(body);
+    }),
+
+    // REFRESH
+    http.post(`${BASE}/auth/refresh/`, () => {
+      return new HttpResponse(null, {
+        status: 200,
+        headers: { "Set-Cookie": "access_token=fake-new; Path=/" },
+      });
+    }),
+
+    // LOGOUT
+    http.post(`${BASE}/auth/logout/`, () => {
+      return new HttpResponse(null, { status: 200 });
+    }),
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Variant fixtures + handlers

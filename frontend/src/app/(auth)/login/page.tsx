@@ -1,12 +1,14 @@
 "use client";
 
 /**
- * Login page (dev affordance).
+ * Login page (cookie-based).
  *
- * Feature `accounts/auth UI` được defer (xem ANALYSIS OQ-2). Trang
- * này dùng simplejwt endpoint /api/v1/auth/token/ trực tiếp + lưu
- * access vào localStorage. Khi feature accounts ra mắt, replace bằng
- * proper login UI (httpOnly refresh, RBAC, social login).
+ * POST /auth/login/ → BE set httpOnly cookies (access + refresh + csrf).
+ * FE không touch token; sau success, gọi /auth/me/ qua useAuth để lấy
+ * permissions + role → redirect.
+ *
+ * Default redirect: /admin/products. Cashier POS sẽ defer riêng.
+ * URL param `?next=...` cùng-origin có ưu tiên.
  */
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,12 +18,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiClient, setAccessToken } from "@/lib/api/client";
-
-interface TokenResponse {
-  access: string;
-  refresh: string;
-}
+import { useLogin } from "@/lib/hooks/use-auth";
 
 function LoginForm() {
   const router = useRouter();
@@ -30,28 +27,31 @@ function LoginForm() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const loginMutation = useLogin();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
-    try {
-      const { data } = await apiClient.post<TokenResponse>("/auth/token/", {
-        username,
-        password,
-      });
-      setAccessToken(data.access);
-      toast.success("Đăng nhập thành công");
-      router.replace(next);
-    } catch (error) {
-      const err = error as { response?: { data?: { detail?: string } } };
-      toast.error(
-        err.response?.data?.detail ?? "Đăng nhập thất bại. Kiểm tra lại tài khoản.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    loginMutation.mutate(
+      { username, password },
+      {
+        onSuccess: (user) => {
+          toast.success(`Chào ${user.full_name || user.username}`);
+          // router.replace cần "next" cùng origin để tránh open redirect.
+          const target = next.startsWith("/") ? next : "/admin/products";
+          router.replace(target);
+        },
+        onError: (error) => {
+          const err = error as { response?: { data?: { detail?: string } } };
+          toast.error(
+            err.response?.data?.detail ??
+              "Đăng nhập thất bại. Kiểm tra lại tài khoản.",
+          );
+        },
+      },
+    );
   }
+
+  const submitting = loginMutation.isPending;
 
   return (
     <div className="grid min-h-screen place-items-center bg-muted/30 p-4">
@@ -62,7 +62,7 @@ function LoginForm() {
         <div>
           <h1 className="text-xl font-semibold">Đăng nhập</h1>
           <p className="text-sm text-muted-foreground">
-            Dev login — dùng tài khoản Django superuser.
+            3D Printing PIM — quản lý sản phẩm & SKU đa kênh
           </p>
         </div>
 

@@ -1,46 +1,44 @@
 "use client";
 
 /**
- * Admin shell layout (placeholder).
+ * Admin shell layout.
  *
- * Tối thiểu: header + sidebar nav + logout. Khi feature `accounts/auth
- * UI` triển khai, thay bằng route protection (middleware check JWT)
- * + sidebar đa role + breadcrumbs.
+ * Auth bootstrap qua useAuth() (gọi GET /auth/me/). Middleware đã guard
+ * tầng cookie trước khi render — vào đây access_token cookie chắc chắn
+ * có. useAuth fetch metadata user (name, role, permissions) cho UI.
  */
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  bootstrapAccessTokenFromStorage,
-  getAccessToken,
-  setAccessToken,
-} from "@/lib/api/client";
+import { useAuth, useLogout } from "@/lib/hooks/use-auth";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
-
-  // Client-side guard: chưa có token → redirect login.
-  useEffect(() => {
-    bootstrapAccessTokenFromStorage();
-    if (!getAccessToken()) {
-      router.replace("/login?next=/admin/products");
-      return;
-    }
-    setReady(true);
-  }, [router]);
+  const { data, isLoading } = useAuth();
+  const logoutMutation = useLogout();
 
   function handleLogout() {
-    setAccessToken(null);
-    router.replace("/login");
+    logoutMutation.mutate(undefined, {
+      onSettled: () => {
+        // Idempotent: BE clear cookies dù logout fail.
+        router.replace("/login");
+      },
+    });
   }
 
-  if (!ready) {
-    return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
+        Loading...
+      </div>
+    );
   }
+
+  const username = data?.user.username ?? "";
+  const role = data?.user.role ?? "";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -58,9 +56,26 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </Link>
           </nav>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
-          Đăng xuất
-        </Button>
+        <div className="flex items-center gap-3 text-sm">
+          {username && (
+            <span className="text-muted-foreground">
+              {username}
+              {role && (
+                <span className="ml-2 rounded bg-muted px-2 py-0.5 font-mono text-xs">
+                  {role}
+                </span>
+              )}
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+          >
+            Đăng xuất
+          </Button>
+        </div>
       </header>
       <main className="flex-1 bg-muted/20">{children}</main>
     </div>

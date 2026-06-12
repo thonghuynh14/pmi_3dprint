@@ -8,16 +8,10 @@
  *   - toast() từ sonner
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
-import { bootstrapAccessTokenFromStorage } from "@/lib/api/client";
-
 export function Providers({ children }: { children: ReactNode }) {
-  useEffect(() => {
-    bootstrapAccessTokenFromStorage();
-  }, []);
-
   const [queryClient] = useState(
     () =>
       new QueryClient({

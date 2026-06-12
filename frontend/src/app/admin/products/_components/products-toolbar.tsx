@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,12 +99,14 @@ export function ProductsToolbar() {
         </Label>
       </div>
 
-      <Button asChild className="ml-auto">
-        <Link href="/admin/products/new">
-          <Plus className="mr-2 h-4 w-4" />
-          Tạo mới
-        </Link>
-      </Button>
+      <PermissionGuard perm="product:create">
+        <Button asChild className="ml-auto">
+          <Link href="/admin/products/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Tạo mới
+          </Link>
+        </Button>
+      </PermissionGuard>
     </div>
   );
 }

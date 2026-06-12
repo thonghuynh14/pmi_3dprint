@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,20 +99,22 @@ export function VariantsToolbar({ productId }: { productId: string }) {
         </Label>
       </div>
 
-      <div className="ml-auto flex gap-2">
-        <Button asChild variant="outline">
-          <Link href={`/admin/products/${productId}/variants/new-matrix`}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Thêm matrix
-          </Link>
-        </Button>
-        <Button asChild>
-          <Link href={`/admin/products/${productId}/variants/new`}>
-            <Plus className="mr-2 h-4 w-4" />
-            Thêm variant
-          </Link>
-        </Button>
-      </div>
+      <PermissionGuard perm="variant:create">
+        <div className="ml-auto flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/admin/products/${productId}/variants/new-matrix`}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Thêm matrix
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href={`/admin/products/${productId}/variants/new`}>
+              <Plus className="mr-2 h-4 w-4" />
+              Thêm variant
+            </Link>
+          </Button>
+        </div>
+      </PermissionGuard>
     </div>
   );
 }

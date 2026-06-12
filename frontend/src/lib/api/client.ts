@@ -1,99 +1,65 @@
 /**
- * API client skeleton — axios instance + JWT interceptors.
+ * Axios instance cho API client (cookie-based JWT auth).
  *
- * Auth flow (xem docs/architecture/tech-stack.md - Auth strategy):
- *   1. Mỗi request gắn Bearer {access_token}
- *   2. 401 → tự refresh qua /api/v1/auth/refresh/ (refresh token trong httpOnly cookie)
- *   3. Retry request gốc, nếu vẫn fail → throw để UI redirect login
+ * Token storage **HOÀN TOÀN ở httpOnly cookies** (BE set qua /auth/login/).
+ * FE không touch token. Lợi ích:
+ *   - XSS không steal được token.
+ *   - Browser tự gửi cookies → không cần Authorization header.
+ *   - State đơn giản (không Zustand store).
  *
- * Endpoint thật mount dưới /api/v1/ — xem backend/config/urls.py.
- * Module này CHƯA bind endpoint cụ thể: từng feature sẽ tạo file riêng
- * (vd src/lib/api/products.ts) gọi qua axios instance này.
+ * Mutation (POST/PATCH/PUT/DELETE) cần `X-CSRFToken` header — axios tự
+ * đọc cookie `csrftoken` (NON-httpOnly) qua `xsrfCookieName`.
+ *
+ * 401 → tự refresh qua `/auth/refresh/` → retry. Refresh fail (refresh
+ * cookie cũng expired) → redirect `/login`.
  */
 import axios, {
   type AxiosError,
   type AxiosInstance,
   type AxiosRequestConfig,
-  type InternalAxiosRequestConfig,
 } from "axios";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "http://localhost:8000/api";
 
-// =============================================================================
-// Token storage
-// =============================================================================
-// MVP: lưu access token trong localStorage để survive page refresh khi
-// chưa có feature `accounts/auth UI` (defer per OQ-2). Production sẽ
-// chuyển sang in-memory + httpOnly refresh cookie.
-const LS_KEY = "pim_access_token";
-let accessToken: string | null = null;
-
-export function setAccessToken(token: string | null): void {
-  accessToken = token;
-  if (typeof window === "undefined") return;
-  if (token) {
-    window.localStorage.setItem(LS_KEY, token);
-  } else {
-    window.localStorage.removeItem(LS_KEY);
-  }
-}
-
-export function getAccessToken(): string | null {
-  return accessToken;
-}
-
-/** Đọc token từ localStorage vào memory. Gọi 1 lần ở client mount
- * (xem components/providers.tsx hoặc app/(admin)/layout.tsx). */
-export function bootstrapAccessTokenFromStorage(): void {
-  if (typeof window === "undefined") return;
-  if (accessToken) return;
-  const stored = window.localStorage.getItem(LS_KEY);
-  if (stored) accessToken = stored;
-}
-
-// =============================================================================
+// ---------------------------------------------------------------------------
 // Axios instance
-// =============================================================================
+// ---------------------------------------------------------------------------
 export const apiClient: AxiosInstance = axios.create({
   baseURL: `${API_BASE_URL}/v1`,
   timeout: 30_000,
-  withCredentials: true, // refresh token cookie
+  // Browser tự gửi cookie cùng host (proxy /api/* qua Next.js → same-origin).
+  withCredentials: true,
+  // Axios tự đọc cookie csrftoken → gửi vào header X-CSRFToken cho mutation.
+  xsrfCookieName: "csrftoken",
+  xsrfHeaderName: "X-CSRFToken",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
 
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-  return config;
-});
-
-// =============================================================================
-// 401 refresh logic
-// =============================================================================
+// ---------------------------------------------------------------------------
+// 401 → refresh → retry
+// ---------------------------------------------------------------------------
 type RetriableConfig = AxiosRequestConfig & { _retry?: boolean };
 
-let refreshPromise: Promise<string | null> | null = null;
+/** Lock concurrent refresh — đa request 401 cùng lúc chỉ refresh 1 lần. */
+let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessCookie(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
     try {
-      const response = await axios.post<{ access: string }>(
+      await axios.post(
         `${API_BASE_URL}/v1/auth/refresh/`,
         {},
         { withCredentials: true },
       );
-      setAccessToken(response.data.access);
-      return response.data.access;
+      return true;
     } catch {
-      setAccessToken(null);
-      return null;
+      return false;
     } finally {
       refreshPromise = null;
     }
@@ -110,14 +76,28 @@ apiClient.interceptors.response.use(
       throw error;
     }
 
-    original._retry = true;
-    const newToken = await refreshAccessToken();
-    if (!newToken) {
-      // BE sẽ redirect login - tuỳ feature middleware xử
+    // Đừng refresh khi chính endpoint /auth/refresh/ hoặc /auth/login/
+    // trả 401 (tránh vòng lặp).
+    if (
+      original.url?.includes("/auth/refresh") ||
+      original.url?.includes("/auth/login")
+    ) {
       throw error;
     }
 
-    original.headers = { ...original.headers, Authorization: `Bearer ${newToken}` };
+    original._retry = true;
+    const ok = await refreshAccessCookie();
+    if (!ok) {
+      // Refresh fail → redirect login (only client-side, server render skip).
+      if (typeof window !== "undefined") {
+        const next = encodeURIComponent(
+          window.location.pathname + window.location.search,
+        );
+        window.location.href = `/login?next=${next}`;
+      }
+      throw error;
+    }
+
     return apiClient.request(original);
   },
 );

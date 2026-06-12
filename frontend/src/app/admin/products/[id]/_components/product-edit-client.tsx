@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PermissionGuard } from "@/components/auth/permission-guard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -81,20 +82,24 @@ export function ProductEditClient({ id }: { id: string }) {
             </Link>
           </Button>
           {isDeleted ? (
-            <Button
-              variant="outline"
-              onClick={() => restoreMutation.mutate(id)}
-              disabled={restoreMutation.isPending}
-            >
-              Khôi phục
-            </Button>
+            <PermissionGuard perm="product:update">
+              <Button
+                variant="outline"
+                onClick={() => restoreMutation.mutate(id)}
+                disabled={restoreMutation.isPending}
+              >
+                Khôi phục
+              </Button>
+            </PermissionGuard>
           ) : (
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmingDelete(true)}
-            >
-              Xoá
-            </Button>
+            <PermissionGuard perm="product:delete">
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Xoá
+              </Button>
+            </PermissionGuard>
           )}
         </div>
       </div>
