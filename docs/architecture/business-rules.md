@@ -233,6 +233,69 @@ AuditLog(
 
 ---
 
+## BR-011: JWT token TTL
+
+**Rule**: Access token TTL = 15 phút; refresh token TTL = 7 ngày. Refresh rotation BẬT (`ROTATE_REFRESH_TOKENS=True`), blacklist sau rotation BẬT (`BLACKLIST_AFTER_ROTATION=True`).
+
+**Why**: 15 phút đủ ngắn để giảm window khi token bị compromise; 7 ngày đủ dài để user không phải re-login mỗi tuần. Rotation chống reuse refresh token cũ.
+
+**Enforcement**:
+- `settings.SIMPLE_JWT.ACCESS_TOKEN_LIFETIME` / `REFRESH_TOKEN_LIFETIME`
+- Configurable qua env `JWT_ACCESS_TOKEN_LIFETIME_MINUTES` / `JWT_REFRESH_TOKEN_LIFETIME_DAYS`
+- `simplejwt.token_blacklist` app track rotated tokens
+
+**Test**: `TestAuthRefresh::test_old_refresh_blacklisted_after_rotation`
+
+---
+
+## BR-012: Permission claim cached trong JWT
+
+**Rule**: Role permissions encode vào JWT claims tại login → invalidate khi access expire (max 15m delay so với DB).
+
+**Why**: Permission check O(1) đọc từ JWT thay vì DB lookup per request. Trade-off: đổi role không phản ánh ngay; UI vẫn enable button trong tối đa 15m. BE luôn enforce nên không có security gap, chỉ UX delay.
+
+**Enforcement**:
+- `apps.accounts.jwt_utils.CustomRefreshToken.for_user()` inject `role` + `permissions[]` vào payload
+- `apps.accounts.permissions.ActionPermission/HasPermission` đọc từ `request._jwt_claims`
+- Force re-login nếu cần invalidate ngay (admin manual qua Django Admin)
+
+**Exception**: N/A (UX only)
+
+**Test**: `TestCustomRefreshToken::test_access_token_inherits_claims`
+
+---
+
+## BR-013: User deactivated reject ngay
+
+**Rule**: User `is_active=False` → reject mọi request kể cả access token còn hạn.
+
+**Why**: Disable user phải có hiệu lực ngay (vd nhân viên nghỉ việc). Không thể đợi 15m cho token expire.
+
+**Enforcement**:
+- `apps.accounts.authentication.CookieJWTAuthentication.authenticate()` check `user.is_active` sau khi decode token
+- `apps.accounts.services.auth.auth_refresh()` check `is_active=True` ở DB lookup
+
+**Exception**: `AuthenticationFailed(code='user_inactive')` → 401
+
+**Test**: `TestCookieJWTAuthentication::test_rejects_deactivated_user` + `TestAuthRefresh::test_raises_when_user_deactivated_after_login`
+
+---
+
+## BR-014: Logout blacklist refresh
+
+**Rule**: Logout (POST `/auth/logout/`) blacklist refresh token + delete cookies. Access token có thể còn hạn nhưng FE đã không có cookie → coi như expired.
+
+**Why**: Bảo đảm logout idempotent + irreversible (refresh cũ không thể tái sử dụng).
+
+**Enforcement**:
+- `apps.accounts.services.auth.auth_logout()` gọi `RefreshToken.blacklist()`
+- `LogoutView.post()` set cookies `Max-Age=0` để browser xoá
+- Idempotent: gọi 2 lần không lỗi (silent với token đã invalid)
+
+**Test**: `TestAuthLogout::test_blacklists_refresh_token`
+
+---
+
 ## Adding new business rules
 
 Khi phát hiện rule mới trong quá trình dev:
