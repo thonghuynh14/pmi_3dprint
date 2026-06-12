@@ -3,8 +3,8 @@
 Thin views — delegate logic xuống service/selector. View chỉ parse
 request, dispatch và serialize output.
 
-Permission: hiện chỉ ``IsAuthenticated``. Khi feature ``accounts/RBAC``
-ready, replace với role-based permission (xem TODO).
+Permission: ``ActionPermission`` map action → permission code từ JWT
+claims (xem feature 03-accounts-rbac).
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ from __future__ import annotations
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import ActionPermission, HasPermission
 from apps.skus.filters import VariantFilter
 from apps.skus.models import Variant
 from apps.skus.selectors.variants import get_variant, list_variants
@@ -38,9 +38,15 @@ from apps.skus.services.variants import (
 class VariantViewSet(viewsets.GenericViewSet):
     """CRUD + restore cho Variant. Lookup qua selector, action qua service."""
 
-    # TODO(accounts): role-based permission
-    # (CatalogManager + Designer + SuperAdmin = write; mọi authenticated = read)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (ActionPermission,)
+    action_permission_map = {
+        "list": "variant:read",
+        "retrieve": "variant:read",
+        "create": "variant:create",
+        "partial_update": "variant:update",
+        "destroy": "variant:delete",
+        "restore": "variant:update",
+    }
 
     # PUT tắt — full-replace nguy hiểm với SKU/axis immutable.
     http_method_names = ("get", "post", "patch", "delete", "head", "options")
@@ -123,7 +129,7 @@ class ProductVariantMatrixView(APIView):
     ``VariantMatrixInputSerializer``. Trả về ``{count, created: [...]}``.
     """
 
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (HasPermission.with_code("variant:create"),)
 
     def post(self, request, product_id):
         serializer = VariantMatrixInputSerializer(data=request.data)

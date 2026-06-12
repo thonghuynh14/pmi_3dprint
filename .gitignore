@@ -181,6 +181,10 @@ backup/
 backend/uploads_dev/
 backend/tmp/
 
+# DB backups (local pg_dump snapshots)
+backup_*.sql
+*.dump
+
 # Storybook
 storybook-static/
 

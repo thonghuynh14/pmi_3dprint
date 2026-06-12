@@ -69,9 +69,12 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.core",
+    "apps.accounts",
     "apps.catalog",
     "apps.skus",
 ]
+
+AUTH_USER_MODEL = "accounts.User"
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -171,6 +174,9 @@ STORAGES = {
 # =============================================================================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        # Cookie-based: đọc access_token từ httpOnly cookie. Mặc định cho FE web.
+        "apps.accounts.authentication.CookieJWTAuthentication",
+        # Header Bearer: fallback cho cURL test + Postman + bot/CI.
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [

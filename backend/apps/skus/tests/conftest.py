@@ -29,9 +29,14 @@ def variant(db, product):
 
 @pytest.fixture
 def auth_client(db):
-    """APIClient đã authenticate với user mới."""
-    user = UserFactory()
+    """APIClient với user is_superuser=True (bypass mọi permission gate).
+
+    Sau feature 03, viewset dùng ActionPermission. is_superuser=True
+    short-circuit ở permission class (chuẩn Django) → tests cũ
+    không cần seed role/permission.
+    """
+    user = UserFactory(is_superuser=True, is_staff=True)
     client = APIClient()
     client.force_authenticate(user=user)
-    client.user = user  # đính kèm để test assert created_by
+    client.user = user
     return client

@@ -3,8 +3,8 @@
 Thin viewset — delegate logic xuống service/selector. ViewSet chỉ parse
 request, dispatch và serialize output.
 
-Permission: hiện chỉ `IsAuthenticated`. Khi feature `accounts/RBAC` ready,
-replace bằng role-based permission class (xem TODO).
+Permission: ``ActionPermission`` map action → permission code từ JWT
+claims (xem feature 03-accounts-rbac).
 """
 
 from __future__ import annotations
@@ -12,9 +12,9 @@ from __future__ import annotations
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.accounts.permissions import ActionPermission
 from apps.catalog.filters import ProductFilter
 from apps.catalog.selectors.products import get_product, list_products
 from apps.catalog.serializers.products import (
@@ -31,9 +31,15 @@ from apps.catalog.services.products import (
 
 
 class ProductViewSet(viewsets.GenericViewSet):
-    # TODO(accounts): replace với role-based permission
-    # (CatalogManager + SuperAdmin = write; mọi authenticated = read)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (ActionPermission,)
+    action_permission_map = {
+        "list": "product:read",
+        "retrieve": "product:read",
+        "create": "product:create",
+        "partial_update": "product:update",
+        "destroy": "product:delete",
+        "restore": "product:update",
+    }
 
     # PUT tắt — chỉ PATCH (xem DESIGN Decision 4)
     http_method_names = ("get", "post", "patch", "delete", "head", "options")

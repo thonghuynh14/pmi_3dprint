@@ -9,24 +9,11 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
-)
-
 from apps.skus.views.variants import ProductVariantMatrixView
 
-# Auth endpoints — JWT (simplejwt). Tạm thay cho feature `accounts/auth UI`
-# (defer per ANALYSIS OQ-2). Catalog Manager dùng để lấy token test API.
-auth_patterns = [
-    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("token/verify/", TokenVerifyView.as_view(), name="token_verify"),
-]
-
 api_v1_patterns = [
-    path("auth/", include((auth_patterns, "auth"))),
+    # Feature 03-accounts-rbac: cookie-based JWT + me + refresh + logout
+    path("auth/", include("apps.accounts.urls")),
     path("catalog/", include("apps.catalog.urls")),
     path("skus/", include("apps.skus.urls")),
     # Matrix endpoint nested under product — giữ ngữ cảnh Product trong URL.
